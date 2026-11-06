@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دخول الأدمن</title>
+  <style>
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+           background:#0f172a; color:#e2e8f0; font-family:system-ui,"Segoe UI",Tahoma,sans-serif; }
+    form { background:#1e293b; padding:28px; border-radius:14px; width:min(340px,90vw); }
+    h2 { margin-top:0; }
+    input { width:100%; padding:10px; margin:6px 0 14px; border-radius:8px; border:1px solid #334155;
+            background:#0f172a; color:#e2e8f0; }
+    button { width:100%; padding:10px; border:0; border-radius:8px; background:#38bdf8; font-weight:700; cursor:pointer; }
+    .err { color:#f87171; font-size:.9rem; }
+    a { color:#38bdf8; }
+  </style>
+</head>
+<body>
+  <form method="post">
+    {% csrf_token %}
+    <h2>دخول الأدمن</h2>
+    {% if form.errors %}<p class="err">اسم المستخدم أو كلمة المرور غير صحيحة، أو الحساب مش أدمن.</p>{% endif %}
+    <label>اسم المستخدم</label>{{ form.username }}
+    <label>كلمة المرور</label>{{ form.password }}
+    <button>دخول</button>
+    <p><a href="{% url 'home' %}">← رجوع</a></p>
+  </form>
+</body>
+</html>

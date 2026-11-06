@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>عارض HTML</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#1e293b; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --danger:#f87171; }
+    * { box-sizing:border-box; }
+    html, body { height:100%; margin:0; }
+    body { font-family:system-ui,"Segoe UI",Tahoma,sans-serif; background:var(--bg); color:var(--text);
+           display:flex; flex-direction:column; }
+    header { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--panel); }
+    header h1 { font-size:1.1rem; margin:0; flex:1; }
+    .btn { background:var(--accent); color:#00263a; border:0; padding:9px 16px; border-radius:8px;
+           font-weight:700; cursor:pointer; font-size:.95rem; text-decoration:none; }
+    .btn.ghost { background:transparent; color:var(--text); border:1px solid #334155; font-weight:400; }
+    .layout { flex:1; display:flex; min-height:0; }
+    aside { width:260px; background:var(--panel); border-left:1px solid #334155; overflow-y:auto; padding:10px; }
+    aside .item { display:flex; align-items:center; gap:6px; border-radius:8px; padding:4px; }
+    aside .item.active { background:#334155; }
+    aside .item a { flex:1; color:var(--text); text-decoration:none; padding:8px; overflow:hidden;
+                    text-overflow:ellipsis; white-space:nowrap; }
+    aside .item button { background:none; border:0; color:var(--danger); cursor:pointer; font-size:1rem; }
+    .stage { flex:1; background:#fff; position:relative; }
+    iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+    .empty { height:100%; display:flex; align-items:center; justify-content:center; color:var(--muted);
+             background:var(--bg); text-align:center; padding:20px; }
+    .msg { background:#7f1d1d; color:#fff; padding:8px 20px; }
+    @media (max-width:700px){ aside{display:none;} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📄 عارض HTML{% if selected %} — {{ selected.title }}{% endif %}</h1>
+    {% if user.is_staff %}
+      <form id="up" action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input id="file" type="file" name="file" accept=".html,.htm,text/html" hidden>
+        <button type="button" class="btn" onclick="document.getElementById('file').click()">⬆ رفع ملف HTML</button>
+      </form>
+      <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="btn ghost">خروج</button></form>
+    {% else %}
+      <a class="btn ghost" href="{% url 'login' %}">دخول الأدمن</a>
+    {% endif %}
+  </header>
+
+  {% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}
+
+  <div class="layout">
+    {% if pages %}
+    <aside>
+      {% for p in pages %}
+        <div class="item {% if selected and p.pk == selected.pk %}active{% endif %}">
+          <a href="?p={{ p.pk }}" title="{{ p.title }}">{{ p.title }}</a>
+          {% if user.is_staff %}
+          <form action="{% url 'delete' p.pk %}" method="post" onsubmit="return confirm('حذف هذا الملف؟')">
+            {% csrf_token %}<button title="حذف">✕</button>
+          </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </aside>
+    {% endif %}
+
+    <div class="stage">
+      {% if selected %}
+        <iframe src="{% url 'raw' selected.pk %}"
+                sandbox="allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock"
+                title="{{ selected.title }}"></iframe>
+      {% else %}
+        <div class="empty">لا يوجد ملف معروض بعد.{% if user.is_staff %}<br>اضغط «رفع ملف HTML» للبدء.{% endif %}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    const f = document.getElementById('file');
+    if (f) f.addEventListener('change', () => f.files.length && document.getElementById('up').submit());
+  </script>
+</body>
+</html>
