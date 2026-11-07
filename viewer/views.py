@@ -177,34 +177,73 @@ def panel(request):
     })
 
 
+NEW = "__new__"      # قيمة خيار «إضافة جديد» في قوائم الرفع
+
+
+def _next_order(model, **filters):
+    return (model.objects.filter(**filters).aggregate(m=Max("order"))["m"] or 0) + 1
+
+
+def _clean_name(post, key, label):
+    name = " ".join((post.get(key) or "").split())[:100]
+    if not name:
+        raise ValidationError(f"اكتب اسم {label} الجديد.")
+    return name
+
+
+def _resolve_subject(post):
+    """بيرجّع المادة المختارة، وبينشئ المرحلة/الصف/المادة لو الأدمن اختار «إضافة جديد»."""
+    if post.get("stage") == NEW:
+        name = _clean_name(post, "new_stage", "المرحلة")
+        stage = Stage.objects.filter(name=name).first() or Stage.objects.create(
+            name=name, order=_next_order(Stage))
+    else:
+        stage = Stage.objects.filter(pk=_int(post.get("stage"))).first()
+        if not stage:
+            raise ValidationError("اختر المرحلة أولاً.")
+
+    if post.get("grade") == NEW:
+        name = _clean_name(post, "new_grade", "الصف")
+        grade = Grade.objects.filter(stage=stage, name=name).first() or Grade.objects.create(
+            stage=stage, name=name, order=_next_order(Grade, stage=stage))
+    else:
+        grade = Grade.objects.filter(pk=_int(post.get("grade")), stage=stage).first()
+        if not grade:
+            raise ValidationError("اختر الصف أولاً.")
+
+    if post.get("subject") == NEW:
+        name = _clean_name(post, "new_subject", "المادة")
+        subject = Subject.objects.filter(grade=grade, name=name).first() or Subject.objects.create(
+            grade=grade, name=name, order=_next_order(Subject, grade=grade))
+    else:
+        subject = Subject.objects.filter(pk=_int(post.get("subject")), grade=grade).first()
+        if not subject:
+            raise ValidationError("اختر المادة أولاً.")
+    return subject
+
+
 @staff_only
 @require_POST
 def panel_upload(request):
-    form = UploadForm(request.POST)
-    if not form.is_valid():
-        _flash_errors(request, form)
-        return redirect("panel")
     files = request.FILES.getlist("file")
     if not files:
         messages.error(request, "اختر ملف HTML واحد على الأقل.")
         return redirect("panel")
-    subject = form.cleaned_data["subject"]
-    make_free = form.cleaned_data["is_free"]
+    make_free = request.POST.get("is_free") == "on"
     if make_free and len(files) > 1:
         messages.error(request, "الملف المجاني واحد فقط. ارفع ملفاً واحداً إذا أردته مجانياً.")
         return redirect("panel")
 
-    parsed = []
     try:
-        for f in files:
-            parsed.append((Path(f.name).stem[:150], read_html_file(f)))
+        parsed = [(Path(f.name).stem[:150], read_html_file(f)) for f in files]
+        with transaction.atomic():          # لو حصل خطأ مفيش حاجة بتتحفظ (حتى التصنيفات الجديدة)
+            subject = _resolve_subject(request.POST)
+            for title, html in parsed:
+                HtmlPage.objects.create(title=title, content=html, subject=subject, is_free=make_free)
     except ValidationError as e:
         messages.error(request, e.messages[0])
         return redirect("panel")
 
-    with transaction.atomic():
-        for title, html in parsed:
-            HtmlPage.objects.create(title=title, content=html, subject=subject, is_free=make_free)
     messages.success(request, f"تم رفع {len(parsed)} ملف في «{subject}».")
     return redirect(f"{reverse('panel')}?s={subject.pk}")
 
@@ -299,6 +338,29 @@ def panel_structure(request):
                 messages.success(request, "تم حذف المادة.")
             except ProtectedError:
                 messages.error(request, "لا يمكن حذف مادة بها ملفات. انقل الملفات أو احذفها أولاً.")
+        elif action in ("rename_stage", "rename_grade", "rename_subject"):
+            name = " ".join((request.POST.get("name") or "").split())[:100]
+            pk = _int(request.POST.get("id"))
+            if not name:
+                messages.error(request, "اكتب الاسم الجديد.")
+            elif action == "rename_stage":
+                obj = get_object_or_404(Stage, pk=pk)
+                if Stage.objects.filter(name=name).exclude(pk=pk).exists():
+                    messages.error(request, "يوجد مرحلة بنفس الاسم.")
+                else:
+                    obj.name = name; obj.save(update_fields=["name"]); messages.success(request, "تم تعديل الاسم.")
+            elif action == "rename_grade":
+                obj = get_object_or_404(Grade, pk=pk)
+                if Grade.objects.filter(stage=obj.stage, name=name).exclude(pk=pk).exists():
+                    messages.error(request, "يوجد صف بنفس الاسم في هذه المرحلة.")
+                else:
+                    obj.name = name; obj.save(update_fields=["name"]); messages.success(request, "تم تعديل الاسم.")
+            else:
+                obj = get_object_or_404(Subject, pk=pk)
+                if Subject.objects.filter(grade=obj.grade, name=name).exclude(pk=pk).exists():
+                    messages.error(request, "يوجد مادة بنفس الاسم في هذا الصف.")
+                else:
+                    obj.name = name; obj.save(update_fields=["name"]); messages.success(request, "تم تعديل الاسم.")
         elif action == "seed" and not Stage.objects.exists():
             for i, (name, count) in enumerate(DEFAULT_STAGES, start=1):
                 _add_grades(Stage.objects.create(name=name, order=i), count)

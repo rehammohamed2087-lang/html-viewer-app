@@ -123,6 +123,10 @@
     .code { font-family:ui-monospace,Consolas,monospace; direction:ltr; font-size:1.05rem; letter-spacing:.1em; background:var(--board); padding:3px 10px; border-radius:5px; }
     .formrow { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
     .formrow label { flex:1 1 160px; margin:0; }
+    details.rn { position:relative; }
+    details.rn summary { list-style:none; cursor:pointer; }
+    details.rn summary::-webkit-details-marker { display:none; }
+    details.rn[open] { flex-basis:100%; order:5; }
     .hint { font-size:.88rem; color:var(--muted); margin:6px 0 0; }
     @media (max-width:560px){ .stage{ height:calc(100vh - 230px);} }
   </style>

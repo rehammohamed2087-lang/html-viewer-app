@@ -6,107 +6,106 @@
 
   <section class="card">
     <h2>رفع ملفات HTML</h2>
-    {% if not structure %}
-      <p>لازم تضيف مرحلة ومادة واحدة على الأقل قبل رفع الملفات.</p>
-      <a class="btn" href="{% url 'panel_structure' %}">إضافة المراحل والمواد</a>
-    {% else %}
-      <form id="up" class="upform" method="post" action="{% url 'panel_upload' %}" enctype="multipart/form-data" data-preset="{{ preset }}">
-        {% csrf_token %}
-        <label>1. المرحلة
-          <select id="stage" required>
-            <option value="">— اختر المرحلة —</option>
-            {% for st in structure %}<option value="{{ st.id }}">{{ st.name }}</option>{% endfor %}
-          </select>
-        </label>
-        <label>2. الصف
-          <select id="grade" required disabled>
-            <option value="">— اختر الصف —</option>
-          </select>
-        </label>
-        <label>3. المادة
-          <select id="subject" name="subject" required disabled>
-            <option value="">— اختر المادة —</option>
-          </select>
-        </label>
-        <label>4. ملف (أو أكثر)
-          <input id="file" type="file" name="file" accept=".html,.htm,text/html" multiple required disabled>
-        </label>
-        <label class="check full">
-          <input type="checkbox" name="is_free"> اجعله الملف المجاني للزوار (يُلغى المجاني السابق)
-        </label>
-        <div class="full">
-          <button id="send" class="btn" disabled>رفع</button>
-          <span class="hint" id="hint">اختر المرحلة والصف والمادة أولاً ثم اختر الملف.</span>
-        </div>
-      </form>
-      {{ structure|json_script:"structure-data" }}
-      <script>
-        (function () {
-          var data = JSON.parse(document.getElementById('structure-data').textContent);
-          var form = document.getElementById('up');
-          var stage = document.getElementById('stage');
-          var grade = document.getElementById('grade');
-          var subject = document.getElementById('subject');
-          var file = document.getElementById('file');
-          var send = document.getElementById('send');
-          var hint = document.getElementById('hint');
-          var DEFAULT_HINT = 'اختر المرحلة والصف والمادة أولاً ثم اختر الملف.';
+    <form id="up" class="upform" method="post" action="{% url 'panel_upload' %}" enctype="multipart/form-data" data-preset="{{ preset }}">
+      {% csrf_token %}
+      <label>1. المرحلة
+        <select id="stage" name="stage" required></select>
+        <input type="text" id="new_stage" name="new_stage" maxlength="100" placeholder="اسم المرحلة الجديدة" hidden style="margin-top:6px">
+      </label>
+      <label>2. الصف
+        <select id="grade" name="grade" required disabled></select>
+        <input type="text" id="new_grade" name="new_grade" maxlength="100" placeholder="اسم الصف الجديد" hidden style="margin-top:6px">
+      </label>
+      <label>3. المادة
+        <select id="subject" name="subject" required disabled></select>
+        <input type="text" id="new_subject" name="new_subject" maxlength="100" placeholder="اسم المادة الجديدة" hidden style="margin-top:6px">
+      </label>
+      <label>4. ملف (أو أكثر)
+        <input id="file" type="file" name="file" accept=".html,.htm,text/html" multiple disabled>
+      </label>
+      <label class="check full">
+        <input type="checkbox" name="is_free"> اجعله الملف المجاني للزوار (يُلغى المجاني السابق)
+      </label>
+      <div class="full">
+        <button id="send" class="btn" disabled>رفع</button>
+        <span class="hint" id="hint">اختر المرحلة والصف والمادة أولاً (أو أضف جديداً بخيار «➕»)، ثم اختر الملف.</span>
+      </div>
+    </form>
+    {{ structure|json_script:"structure-data" }}
+    <script>
+      (function () {
+        var NEW = '__new__';
+        var data = JSON.parse(document.getElementById('structure-data').textContent);
+        var form = document.getElementById('up');
+        var stage = document.getElementById('stage'), grade = document.getElementById('grade'), subject = document.getElementById('subject');
+        var nStage = document.getElementById('new_stage'), nGrade = document.getElementById('new_grade'), nSubject = document.getElementById('new_subject');
+        var file = document.getElementById('file'), send = document.getElementById('send'), hint = document.getElementById('hint');
 
-          function reset(sel, label) { sel.innerHTML = '<option value="">— ' + label + ' —</option>'; }
-          function fill(sel, items, selectedId) {
-            items.forEach(function (it) {
-              var o = document.createElement('option');
-              o.value = it.id; o.textContent = it.name;
-              if (String(it.id) === String(selectedId)) o.selected = true;
-              sel.appendChild(o);
-            });
-            sel.disabled = items.length === 0;
+        function find(list, id) { return (list || []).filter(function (x) { return String(x.id) === String(id); })[0]; }
+        function build(sel, items, selectedId, newLabel, forceNew) {
+          sel.innerHTML = '';
+          function add(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); return o; }
+          add('', '— اختر —');
+          items.forEach(function (it) { add(it.id, it.name); });
+          add(NEW, newLabel);
+          sel.disabled = false;
+          sel.value = forceNew ? NEW : (selectedId ? String(selectedId) : '');
+        }
+        function toggleNew(sel, input) {
+          var on = sel.value === NEW;
+          input.hidden = !on; input.required = on;
+          if (!on) input.value = '';
+          else if (document.activeElement === sel) input.focus();
+        }
+        function lock(sel, label) {
+          sel.innerHTML = '<option value="">— ' + label + ' —</option>'; sel.disabled = true;
+        }
+        function onSubject() { toggleNew(subject, nSubject); refresh(); }
+        function onGrade(selectedSubject) {
+          toggleNew(grade, nGrade);
+          if (!grade.value) { lock(subject, 'اختر المادة'); }
+          else {
+            var st = find(data, stage.value), g = st && find(st.grades, grade.value);
+            build(subject, g ? g.subjects : [], selectedSubject, '➕ إضافة مادة جديدة…', grade.value === NEW);
           }
-          function find(list, id) { return list.filter(function (x) { return String(x.id) === String(id); })[0]; }
+          onSubject();
+        }
+        function onStage(selectedGrade, selectedSubject) {
+          toggleNew(stage, nStage);
+          if (!stage.value) { lock(grade, 'اختر الصف'); }
+          else {
+            var st = find(data, stage.value);
+            build(grade, st ? st.grades : [], selectedGrade, '➕ إضافة صف جديد…', stage.value === NEW);
+          }
+          onGrade(selectedSubject);
+        }
+        function filled(sel, input) { return sel.value && (sel.value !== NEW || input.value.trim()); }
+        function refresh() {
+          var ready = filled(stage, nStage) && filled(grade, nGrade) && filled(subject, nSubject);
+          file.disabled = !ready;
+          send.disabled = !(ready && file.files.length);
+        }
 
-          function fillGrades(stageId, selectedId) {
-            reset(grade, 'اختر الصف'); reset(subject, 'اختر المادة'); subject.disabled = true;
-            var st = find(data, stageId);
-            if (st) { fill(grade, st.grades, selectedId); if (!st.grades.length) hint.textContent = 'هذه المرحلة ليس بها صفوف. أضفها من «المراحل والمواد».'; }
-            else grade.disabled = true;
-            refresh();
-          }
-          function fillSubjects(stageId, gradeId, selectedId) {
-            reset(subject, 'اختر المادة');
-            var st = find(data, stageId), g = st && find(st.grades, gradeId);
-            if (g) { fill(subject, g.subjects, selectedId); if (!g.subjects.length) hint.textContent = 'هذا الصف ليس به مواد. أضف مادة من «المراحل والمواد».'; }
-            else subject.disabled = true;
-            refresh();
-          }
-          function refresh() {
-            var ready = stage.value && grade.value && subject.value;
-            file.disabled = !ready;
-            send.disabled = !(ready && file.files.length);
-            if (ready) hint.textContent = 'سيتم الرفع داخل المادة المختارة.';
-            else if (stage.value && grade.value && subject.value === '' && !subject.disabled) hint.textContent = DEFAULT_HINT;
-            else if (!stage.value || !grade.value) hint.textContent = DEFAULT_HINT;
-          }
-          stage.addEventListener('change', function () { fillGrades(stage.value, ''); });
-          grade.addEventListener('change', function () { fillSubjects(stage.value, grade.value, ''); });
-          subject.addEventListener('change', refresh);
-          file.addEventListener('change', refresh);
+        build(stage, data, '', '➕ إضافة مرحلة جديدة…', false);
+        lock(grade, 'اختر الصف'); lock(subject, 'اختر المادة');
 
-          var preset = form.dataset.preset;
-          if (preset) {
-            data.forEach(function (st) {
-              st.grades.forEach(function (g) {
-                g.subjects.forEach(function (su) {
-                  if (String(su.id) === preset) {
-                    stage.value = st.id; fillGrades(st.id, g.id);
-                    fillSubjects(st.id, g.id, su.id);
-                  }
-                });
-              });
-            });
-          }
-        })();
-      </script>
-    {% endif %}
+        stage.addEventListener('change', function () { onStage('', ''); });
+        grade.addEventListener('change', function () { onGrade(''); });
+        subject.addEventListener('change', onSubject);
+        [nStage, nGrade, nSubject].forEach(function (i) { i.addEventListener('input', refresh); });
+        file.addEventListener('change', refresh);
+
+        var preset = form.dataset.preset;
+        if (preset) {
+          data.forEach(function (st) { st.grades.forEach(function (g) { g.subjects.forEach(function (su) {
+            if (String(su.id) === preset) {
+              stage.value = String(st.id);
+              onStage(g.id, su.id);
+            }
+          }); }); });
+        }
+      })();
+    </script>
   </section>
 
   {% for stage in stages %}

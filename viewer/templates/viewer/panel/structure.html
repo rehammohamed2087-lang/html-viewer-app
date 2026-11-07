@@ -25,6 +25,7 @@
   <section class="card">
     <div style="display:flex;align-items:center;gap:10px">
       <h2 style="flex:1;margin:0">{{ stage.name }}</h2>
+<details class="rn"><summary class="btn ghost small">تعديل الاسم</summary><form method="post" class="formrow" style="margin-top:8px">{% csrf_token %}<input type="hidden" name="action" value="rename_stage"><input type="hidden" name="id" value="{{ stage.pk }}"><input type="text" name="name" maxlength="100" required value="{{ stage.name }}" style="flex:1 1 160px"><button class="btn small">حفظ</button></form></details>
       <form method="post" onsubmit="return confirm('حذف المرحلة وكل صفوفها ومواده؟')">{% csrf_token %}
         <input type="hidden" name="action" value="delete_stage"><input type="hidden" name="id" value="{{ stage.pk }}">
         <button class="btn danger small">حذف المرحلة</button>
@@ -50,6 +51,7 @@
     <div class="card" style="background:var(--board);margin:10px 0">
       <div style="display:flex;align-items:center;gap:10px">
         <h3 style="flex:1;margin:0;color:var(--yellow)">{{ g.name }}</h3>
+<details class="rn"><summary class="btn ghost small">تعديل الاسم</summary><form method="post" class="formrow" style="margin-top:8px">{% csrf_token %}<input type="hidden" name="action" value="rename_grade"><input type="hidden" name="id" value="{{ g.pk }}"><input type="text" name="name" maxlength="100" required value="{{ g.name }}" style="flex:1 1 160px"><button class="btn small">حفظ</button></form></details>
         <form method="post" onsubmit="return confirm('حذف هذا الصف وكل موادّه؟')">{% csrf_token %}
           <input type="hidden" name="action" value="delete_grade"><input type="hidden" name="id" value="{{ g.pk }}">
           <button class="btn danger small">حذف الصف</button>
@@ -60,6 +62,7 @@
           <div class="row">
             <span class="name">{{ s.name }}</span>
             <span class="muted">{{ s.n }} ملف</span>
+<details class="rn"><summary class="btn ghost small">تعديل الاسم</summary><form method="post" class="formrow" style="margin-top:8px">{% csrf_token %}<input type="hidden" name="action" value="rename_subject"><input type="hidden" name="id" value="{{ s.pk }}"><input type="text" name="name" maxlength="100" required value="{{ s.name }}" style="flex:1 1 160px"><button class="btn small">حفظ</button></form></details>
             <form method="post" onsubmit="return confirm('حذف هذه المادة؟')" style="margin:0">{% csrf_token %}
               <input type="hidden" name="action" value="delete_subject"><input type="hidden" name="id" value="{{ s.pk }}">
               <button class="btn danger small">حذف</button>
