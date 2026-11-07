@@ -1,0 +1,19 @@
+{% extends "viewer/base.html" %}
+{% block title %}{{ stage.name }} — {{ site.site_name }}{% endblock %}
+{% block content %}
+<div class="wrap">
+  <div class="crumbs"><a href="{% url 'home' %}">الرئيسية</a></div>
+  <h1 class="page-title">{{ stage.name }}</h1>
+  <p class="muted" style="margin-top:-8px">اختر الصف</p>
+  <div class="grid" style="padding-bottom:30px">
+    {% for g in grades %}
+      <a class="tile big" href="{% url 'grade' g.pk %}">
+        <span class="t-name">{{ g.name }}</span>
+        <span class="t-count">{{ g.n }} مادة</span>
+      </a>
+    {% empty %}
+      <div class="empty" style="grid-column:1/-1">لا توجد صفوف في هذه المرحلة بعد.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

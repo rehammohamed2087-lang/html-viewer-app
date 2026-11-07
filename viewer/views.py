@@ -62,14 +62,24 @@ def home(request):
     legacy = request.GET.get("p", "")          # روابط قديمة ?p=ID
     if legacy.isdigit():
         return redirect("page", pk=int(legacy))
-    stages = Stage.objects.prefetch_related(
-        Prefetch("grades__subjects", queryset=Subject.objects.annotate(n=Count("pages")))
-    )
+    stages = Stage.objects.annotate(n=Count("grades"))
     free_page = (
         HtmlPage.objects.filter(is_free=True)
         .select_related("subject__grade__stage").defer("content").first()
     )
     return render(request, "viewer/home.html", {"stages": stages, "free_page": free_page})
+
+
+def stage_view(request, pk):
+    stage = get_object_or_404(Stage, pk=pk)
+    grades = stage.grades.annotate(n=Count("subjects"))
+    return render(request, "viewer/stage.html", {"stage": stage, "grades": grades})
+
+
+def grade_view(request, pk):
+    grade = get_object_or_404(Grade.objects.select_related("stage"), pk=pk)
+    subjects = grade.subjects.annotate(n=Count("pages"))
+    return render(request, "viewer/grade.html", {"grade": grade, "subjects": subjects})
 
 
 def subject_view(request, pk):

@@ -26,34 +26,21 @@
 </section>
 
 <div class="wrap">
-  {% for stage in stages %}
   <section class="stage-sec">
-    <h2>{{ stage.name }}</h2>
-    {% for g in stage.grades.all %}
-      {% with subs=g.subjects.all %}
-      {% if subs or user.is_staff %}
-      <h3 class="grade-title">{{ g.name }}</h3>
-      <div class="grid">
-        {% for s in subs %}
-          <a class="tile" href="{% url 'subject' s.pk %}">
-            <span class="t-name">{{ s.name }}</span>
-            <span class="t-count">{{ s.n }} ملف</span>
-          </a>
-        {% empty %}
-          <p class="muted">لا توجد مواد في هذا الصف بعد.</p>
-        {% endfor %}
-      </div>
-      {% endif %}
-      {% endwith %}
-    {% empty %}
-      <p class="muted">لا توجد صفوف في هذه المرحلة بعد.</p>
-    {% endfor %}
+    <h2>اختر المرحلة</h2>
+    <div class="grid">
+      {% for stage in stages %}
+        <a class="tile big" href="{% url 'stage' stage.pk %}">
+          <span class="t-name">{{ stage.name }}</span>
+          <span class="t-count">{{ stage.n }} صف</span>
+        </a>
+      {% empty %}
+        <div class="empty" style="grid-column:1/-1">
+          لم تتم إضافة أقسام بعد.
+          {% if user.is_staff %}<br><a href="{% url 'panel_structure' %}">أضف المراحل والصفوف والمواد من لوحة التحكم</a>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
   </section>
-  {% empty %}
-  <div class="empty">
-    لم تتم إضافة أقسام بعد.
-    {% if user.is_staff %}<br><a href="{% url 'panel_structure' %}">أضف المراحل والمواد من لوحة التحكم</a>{% endif %}
-  </div>
-  {% endfor %}
 </div>
 {% endblock %}
