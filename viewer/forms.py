@@ -5,7 +5,7 @@ from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
-from .models import AccessCode, HtmlPage, SiteSettings, Stage, Subject
+from .models import AccessCode, Grade, HtmlPage, SiteSettings, Stage, Subject
 
 
 def read_html_file(f):
@@ -26,8 +26,8 @@ def read_html_file(f):
 
 class UploadForm(forms.Form):
     subject = forms.ModelChoiceField(
-        queryset=Subject.objects.select_related("stage"),
-        error_messages={"required": "اختر المرحلة والمادة قبل رفع الملف."},
+        queryset=Subject.objects.select_related("grade__stage"),
+        error_messages={"required": "اختر المرحلة والصف والمادة قبل رفع الملف."},
     )
     is_free = forms.BooleanField(required=False)
 
@@ -38,23 +38,29 @@ class StageForm(forms.ModelForm):
         fields = ["name"]
 
 
+class GradeForm(forms.ModelForm):
+    class Meta:
+        model = Grade
+        fields = ["stage", "name"]
+
+
 class SubjectForm(forms.ModelForm):
     class Meta:
         model = Subject
-        fields = ["stage", "name"]
+        fields = ["grade", "name"]
 
 
 class FileEditForm(forms.ModelForm):
     class Meta:
         model = HtmlPage
         fields = ["title", "subject", "is_free"]
-        labels = {"title": "اسم الملف", "subject": "المرحلة › المادة", "is_free": "ملف مجاني"}
+        labels = {"title": "اسم الملف", "subject": "المرحلة › الصف › المادة", "is_free": "ملف مجاني"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         field = self.fields["subject"]
-        field.queryset = Subject.objects.select_related("stage")
-        field.label_from_instance = lambda o: f"{o.stage.name} › {o.name}"
+        field.queryset = Subject.objects.select_related("grade__stage")
+        field.label_from_instance = lambda o: f"{o.grade.stage.name} › {o.grade.name} › {o.name}"
         field.empty_label = "— اختر —"
         field.required = True
 

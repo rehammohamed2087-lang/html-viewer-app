@@ -5,7 +5,7 @@
   <div class="viewer-bar">
     <div class="crumbs">
       <a href="{% url 'home' %}">الرئيسية</a>
-      {% if page.subject %} › {{ page.subject.stage.name }} › <a href="{% url 'subject' page.subject.pk %}">{{ page.subject.name }}</a>{% endif %}
+      {% if page.subject %} › {{ page.subject.grade.stage.name }} › {{ page.subject.grade.name }} › <a href="{% url 'subject' page.subject.pk %}">{{ page.subject.name }}</a>{% endif %}
       › {{ page.title }}
     </div>
     {% if page.is_free %}<span class="tag">مجاني</span>{% endif %}

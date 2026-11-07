@@ -18,20 +18,36 @@ class Stage(models.Model):
         return self.name
 
 
-class Subject(models.Model):
-    """المادة داخل مرحلة."""
-    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="subjects")
+class Grade(models.Model):
+    """الصف داخل مرحلة (الصف الأول، الثاني ...)."""
+    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="grades")
     name = models.CharField(max_length=100)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["order", "id"]
         constraints = [
-            models.UniqueConstraint(fields=["stage", "name"], name="uniq_subject_per_stage"),
+            models.UniqueConstraint(fields=["stage", "name"], name="uniq_grade_per_stage"),
         ]
 
     def __str__(self):
         return f"{self.stage.name} › {self.name}"
+
+
+class Subject(models.Model):
+    """المادة داخل صف."""
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name="subjects")
+    name = models.CharField(max_length=100)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["grade", "name"], name="uniq_subject_per_grade"),
+        ]
+
+    def __str__(self):
+        return f"{self.grade.stage.name} › {self.grade.name} › {self.name}"
 
 
 class HtmlPage(models.Model):

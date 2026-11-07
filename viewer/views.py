@@ -17,13 +17,32 @@ from django.views.decorators.http import require_POST
 
 from .access import has_access
 from .forms import (
-    CodeCreateForm, FileEditForm, StageForm, SettingsForm, SubjectForm, UploadForm, read_html_file,
+    CodeCreateForm, FileEditForm, GradeForm, StageForm, SettingsForm, SubjectForm, UploadForm,
+    read_html_file,
 )
-from .models import AccessCode, HtmlPage, SiteSettings, Stage, Subject
+from .models import AccessCode, Grade, HtmlPage, SiteSettings, Stage, Subject
 
 staff_only = staff_member_required(login_url="login")
 
-DEFAULT_STAGES = ["المرحلة الابتدائية", "المرحلة الإعدادية", "المرحلة الثانوية"]
+# (اسم المرحلة، عدد الصفوف)
+DEFAULT_STAGES = [("المرحلة الابتدائية", 6), ("المرحلة الإعدادية", 3), ("المرحلة الثانوية", 3)]
+ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس",
+            "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر"]
+
+
+def _add_grades(stage, count):
+    """بيضيف «الصف الأول» ... حتى العدد المطلوب، ويتخطى الموجود."""
+    existing = set(stage.grades.values_list("name", flat=True))
+    order = stage.grades.aggregate(m=Max("order"))["m"] or 0
+    added = 0
+    for i in range(min(count, len(ORDINALS))):
+        name = f"الصف {ORDINALS[i]}"
+        if name in existing:
+            continue
+        order += 1
+        Grade.objects.create(stage=stage, name=name, order=order)
+        added += 1
+    return added
 
 
 def _flash_errors(request, form):
@@ -44,24 +63,24 @@ def home(request):
     if legacy.isdigit():
         return redirect("page", pk=int(legacy))
     stages = Stage.objects.prefetch_related(
-        Prefetch("subjects", queryset=Subject.objects.annotate(n=Count("pages")))
+        Prefetch("grades__subjects", queryset=Subject.objects.annotate(n=Count("pages")))
     )
     free_page = (
         HtmlPage.objects.filter(is_free=True)
-        .select_related("subject__stage").defer("content").first()
+        .select_related("subject__grade__stage").defer("content").first()
     )
     return render(request, "viewer/home.html", {"stages": stages, "free_page": free_page})
 
 
 def subject_view(request, pk):
-    subject = get_object_or_404(Subject.objects.select_related("stage"), pk=pk)
+    subject = get_object_or_404(Subject.objects.select_related("grade__stage"), pk=pk)
     pages = subject.pages.defer("content")
     return render(request, "viewer/subject.html", {"subject": subject, "pages": pages})
 
 
 def page_view(request, pk):
     page = get_object_or_404(
-        HtmlPage.objects.select_related("subject__stage").defer("content"), pk=pk
+        HtmlPage.objects.select_related("subject__grade__stage").defer("content"), pk=pk
     )
     free_page = None
     allowed = has_access(request, page)
@@ -127,11 +146,15 @@ def lock(request):
 @staff_only
 def panel(request):
     stages = Stage.objects.prefetch_related(
-        Prefetch("subjects__pages", queryset=HtmlPage.objects.defer("content"))
+        Prefetch("grades__subjects__pages", queryset=HtmlPage.objects.defer("content"))
     )
     structure = [
         {"id": st.id, "name": st.name,
-         "subjects": [{"id": su.id, "name": su.name} for su in st.subjects.all()]}
+         "grades": [
+             {"id": g.id, "name": g.name,
+              "subjects": [{"id": su.id, "name": su.name} for su in g.subjects.all()]}
+             for g in st.grades.all()
+         ]}
         for st in stages
     ]
     orphans = HtmlPage.objects.filter(subject__isnull=True).defer("content")
@@ -222,11 +245,25 @@ def panel_structure(request):
                 messages.success(request, f"تمت إضافة «{obj.name}».")
             else:
                 _flash_errors(request, form)
+        elif action == "add_grade":
+            form = GradeForm(request.POST)
+            if form.is_valid():
+                obj = form.save(commit=False)
+                obj.order = (Grade.objects.filter(stage=obj.stage).aggregate(m=Max("order"))["m"] or 0) + 1
+                obj.save()
+                messages.success(request, f"تمت إضافة «{obj.name}».")
+            else:
+                _flash_errors(request, form)
+        elif action == "add_grades":
+            stage = get_object_or_404(Stage, pk=_int(request.POST.get("stage")))
+            count = min(max(_int(request.POST.get("count")), 1), len(ORDINALS))
+            added = _add_grades(stage, count)
+            messages.success(request, f"تمت إضافة {added} صف." if added else "الصفوف موجودة بالفعل.")
         elif action == "add_subject":
             form = SubjectForm(request.POST)
             if form.is_valid():
                 obj = form.save(commit=False)
-                obj.order = (Subject.objects.filter(stage=obj.stage).aggregate(m=Max("order"))["m"] or 0) + 1
+                obj.order = (Subject.objects.filter(grade=obj.grade).aggregate(m=Max("order"))["m"] or 0) + 1
                 obj.save()
                 messages.success(request, f"تمت إضافة المادة «{obj.name}».")
             else:
@@ -238,6 +275,13 @@ def panel_structure(request):
                 messages.success(request, "تم حذف المرحلة.")
             except ProtectedError:
                 messages.error(request, "لا يمكن حذف مرحلة بها ملفات. انقل الملفات أو احذفها أولاً.")
+        elif action == "delete_grade":
+            grade = get_object_or_404(Grade, pk=_int(request.POST.get("id")))
+            try:
+                grade.delete()
+                messages.success(request, "تم حذف الصف.")
+            except ProtectedError:
+                messages.error(request, "لا يمكن حذف صف به ملفات. انقل الملفات أو احذفها أولاً.")
         elif action == "delete_subject":
             subject = get_object_or_404(Subject, pk=_int(request.POST.get("id")))
             try:
@@ -246,13 +290,13 @@ def panel_structure(request):
             except ProtectedError:
                 messages.error(request, "لا يمكن حذف مادة بها ملفات. انقل الملفات أو احذفها أولاً.")
         elif action == "seed" and not Stage.objects.exists():
-            for i, name in enumerate(DEFAULT_STAGES, start=1):
-                Stage.objects.create(name=name, order=i)
-            messages.success(request, "تمت إضافة المراحل الافتراضية.")
+            for i, (name, count) in enumerate(DEFAULT_STAGES, start=1):
+                _add_grades(Stage.objects.create(name=name, order=i), count)
+            messages.success(request, "تمت إضافة المراحل والصفوف الافتراضية.")
         return redirect("panel_structure")
 
     stages = Stage.objects.prefetch_related(
-        Prefetch("subjects", queryset=Subject.objects.annotate(n=Count("pages")))
+        Prefetch("grades__subjects", queryset=Subject.objects.annotate(n=Count("pages")))
     )
     return render(request, "viewer/panel/structure.html", {"stages": stages})
 

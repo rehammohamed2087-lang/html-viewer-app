@@ -1,5 +1,5 @@
 {% extends "viewer/base.html" %}
-{% block title %}المراحل والمواد{% endblock %}
+{% block title %}المراحل والصفوف والمواد{% endblock %}
 {% block content %}
 <div class="wrap">
   {% include "viewer/panel/_nav.html" with active="structure" %}
@@ -9,14 +9,14 @@
     <form method="post" class="formrow">
       {% csrf_token %}
       <input type="hidden" name="action" value="add_stage">
-      <label>اسم المرحلة <input type="text" name="name" maxlength="100" required placeholder="مثال: المرحلة الثانوية"></label>
+      <label>اسم المرحلة <input type="text" name="name" maxlength="100" required placeholder="مثال: المرحلة الإعدادية"></label>
       <button class="btn">إضافة</button>
     </form>
     {% if not stages %}
     <form method="post" style="margin-top:12px">
       {% csrf_token %}
       <input type="hidden" name="action" value="seed">
-      <button class="btn ghost small">أو أضف المراحل الافتراضية (ابتدائي / إعدادي / ثانوي)</button>
+      <button class="btn ghost small">أو أضف الافتراضي: الابتدائية (6 صفوف) + الإعدادية (3) + الثانوية (3)</button>
     </form>
     {% endif %}
   </section>
@@ -24,32 +24,61 @@
   {% for stage in stages %}
   <section class="card">
     <div style="display:flex;align-items:center;gap:10px">
-      <h3 style="flex:1;margin:0">{{ stage.name }}</h3>
-      <form method="post" onsubmit="return confirm('حذف المرحلة وكل موادها؟')">{% csrf_token %}
+      <h2 style="flex:1;margin:0">{{ stage.name }}</h2>
+      <form method="post" onsubmit="return confirm('حذف المرحلة وكل صفوفها ومواده؟')">{% csrf_token %}
         <input type="hidden" name="action" value="delete_stage"><input type="hidden" name="id" value="{{ stage.pk }}">
         <button class="btn danger small">حذف المرحلة</button>
       </form>
     </div>
-    <div class="rows" style="padding:12px 0 0">
-      {% for s in stage.subjects.all %}
-        <div class="row">
-          <span class="name">{{ s.name }}</span>
-          <span class="muted">{{ s.n }} ملف</span>
-          <form method="post" onsubmit="return confirm('حذف هذه المادة؟')" style="margin:0">{% csrf_token %}
-            <input type="hidden" name="action" value="delete_subject"><input type="hidden" name="id" value="{{ s.pk }}">
-            <button class="btn danger small">حذف</button>
-          </form>
-        </div>
-      {% empty %}
-        <p class="muted" style="margin:0">لا توجد مواد بعد.</p>
-      {% endfor %}
+
+    <div class="formrow" style="margin:14px 0">
+      <form method="post" class="formrow" style="flex:1 1 260px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_grades"><input type="hidden" name="stage" value="{{ stage.pk }}">
+        <label>إضافة صفوف دفعة واحدة (من الأول إلى رقم) <input type="number" name="count" min="1" max="12" value="3" required></label>
+        <button class="btn ghost">إضافة الصفوف</button>
+      </form>
+      <form method="post" class="formrow" style="flex:1 1 260px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_grade"><input type="hidden" name="stage" value="{{ stage.pk }}">
+        <label>أو صف باسم مخصص <input type="text" name="name" maxlength="100" required placeholder="مثال: الصف الأول"></label>
+        <button class="btn ghost">إضافة</button>
+      </form>
     </div>
-    <form method="post" class="formrow" style="margin-top:14px">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="add_subject"><input type="hidden" name="stage" value="{{ stage.pk }}">
-      <label>مادة جديدة في «{{ stage.name }}» <input type="text" name="name" maxlength="100" required placeholder="مثال: اللغة العربية"></label>
-      <button class="btn">إضافة مادة</button>
-    </form>
+
+    {% for g in stage.grades.all %}
+    <div class="card" style="background:var(--board);margin:10px 0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h3 style="flex:1;margin:0;color:var(--yellow)">{{ g.name }}</h3>
+        <form method="post" onsubmit="return confirm('حذف هذا الصف وكل موادّه؟')">{% csrf_token %}
+          <input type="hidden" name="action" value="delete_grade"><input type="hidden" name="id" value="{{ g.pk }}">
+          <button class="btn danger small">حذف الصف</button>
+        </form>
+      </div>
+      <div class="rows" style="padding:10px 0 0">
+        {% for s in g.subjects.all %}
+          <div class="row">
+            <span class="name">{{ s.name }}</span>
+            <span class="muted">{{ s.n }} ملف</span>
+            <form method="post" onsubmit="return confirm('حذف هذه المادة؟')" style="margin:0">{% csrf_token %}
+              <input type="hidden" name="action" value="delete_subject"><input type="hidden" name="id" value="{{ s.pk }}">
+              <button class="btn danger small">حذف</button>
+            </form>
+          </div>
+        {% empty %}
+          <p class="muted" style="margin:0">لا توجد مواد بعد.</p>
+        {% endfor %}
+      </div>
+      <form method="post" class="formrow" style="margin-top:12px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_subject"><input type="hidden" name="grade" value="{{ g.pk }}">
+        <label>مادة جديدة في «{{ g.name }}» <input type="text" name="name" maxlength="100" required placeholder="مثال: اللغة العربية"></label>
+        <button class="btn">إضافة مادة</button>
+      </form>
+    </div>
+    {% empty %}
+      <p class="muted">لا توجد صفوف بعد. أضفها من الأعلى.</p>
+    {% endfor %}
   </section>
   {% endfor %}
 </div>

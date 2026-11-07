@@ -2,7 +2,7 @@
 {% block title %}{{ subject.name }} — {{ site.site_name }}{% endblock %}
 {% block content %}
 <div class="wrap">
-  <div class="crumbs"><a href="{% url 'home' %}">الرئيسية</a> › {{ subject.stage.name }}</div>
+  <div class="crumbs"><a href="{% url 'home' %}">الرئيسية</a> › {{ subject.grade.stage.name }} › {{ subject.grade.name }}</div>
   <h1 class="page-title">{{ subject.name }}</h1>
   <div class="rows">
     {% for p in pages %}

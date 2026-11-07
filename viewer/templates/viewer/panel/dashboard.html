@@ -18,12 +18,17 @@
             {% for st in structure %}<option value="{{ st.id }}">{{ st.name }}</option>{% endfor %}
           </select>
         </label>
-        <label>2. المادة
+        <label>2. الصف
+          <select id="grade" required disabled>
+            <option value="">— اختر الصف —</option>
+          </select>
+        </label>
+        <label>3. المادة
           <select id="subject" name="subject" required disabled>
             <option value="">— اختر المادة —</option>
           </select>
         </label>
-        <label>3. ملف (أو أكثر)
+        <label>4. ملف (أو أكثر)
           <input id="file" type="file" name="file" accept=".html,.htm,text/html" multiple required disabled>
         </label>
         <label class="check full">
@@ -31,7 +36,7 @@
         </label>
         <div class="full">
           <button id="send" class="btn" disabled>رفع</button>
-          <span class="hint" id="hint">اختر المرحلة والمادة أولاً ثم اختر الملف.</span>
+          <span class="hint" id="hint">اختر المرحلة والصف والمادة أولاً ثم اختر الملف.</span>
         </div>
       </form>
       {{ structure|json_script:"structure-data" }}
@@ -40,42 +45,62 @@
           var data = JSON.parse(document.getElementById('structure-data').textContent);
           var form = document.getElementById('up');
           var stage = document.getElementById('stage');
+          var grade = document.getElementById('grade');
           var subject = document.getElementById('subject');
           var file = document.getElementById('file');
           var send = document.getElementById('send');
           var hint = document.getElementById('hint');
+          var DEFAULT_HINT = 'اختر المرحلة والصف والمادة أولاً ثم اختر الملف.';
 
-          function fillSubjects(stageId, selectedId) {
-            subject.innerHTML = '<option value="">— اختر المادة —</option>';
-            var st = data.filter(function (s) { return String(s.id) === String(stageId); })[0];
-            if (st) {
-              st.subjects.forEach(function (su) {
-                var o = document.createElement('option');
-                o.value = su.id; o.textContent = su.name;
-                if (String(su.id) === String(selectedId)) o.selected = true;
-                subject.appendChild(o);
-              });
-            }
-            subject.disabled = !st || st.subjects.length === 0;
-            if (st && st.subjects.length === 0) hint.textContent = 'هذه المرحلة ليس بها مواد. أضف مادة من «المراحل والمواد».';
+          function reset(sel, label) { sel.innerHTML = '<option value="">— ' + label + ' —</option>'; }
+          function fill(sel, items, selectedId) {
+            items.forEach(function (it) {
+              var o = document.createElement('option');
+              o.value = it.id; o.textContent = it.name;
+              if (String(it.id) === String(selectedId)) o.selected = true;
+              sel.appendChild(o);
+            });
+            sel.disabled = items.length === 0;
+          }
+          function find(list, id) { return list.filter(function (x) { return String(x.id) === String(id); })[0]; }
+
+          function fillGrades(stageId, selectedId) {
+            reset(grade, 'اختر الصف'); reset(subject, 'اختر المادة'); subject.disabled = true;
+            var st = find(data, stageId);
+            if (st) { fill(grade, st.grades, selectedId); if (!st.grades.length) hint.textContent = 'هذه المرحلة ليس بها صفوف. أضفها من «المراحل والمواد».'; }
+            else grade.disabled = true;
+            refresh();
+          }
+          function fillSubjects(stageId, gradeId, selectedId) {
+            reset(subject, 'اختر المادة');
+            var st = find(data, stageId), g = st && find(st.grades, gradeId);
+            if (g) { fill(subject, g.subjects, selectedId); if (!g.subjects.length) hint.textContent = 'هذا الصف ليس به مواد. أضف مادة من «المراحل والمواد».'; }
+            else subject.disabled = true;
             refresh();
           }
           function refresh() {
-            var ready = stage.value && subject.value;
+            var ready = stage.value && grade.value && subject.value;
             file.disabled = !ready;
             send.disabled = !(ready && file.files.length);
             if (ready) hint.textContent = 'سيتم الرفع داخل المادة المختارة.';
-            else if (!subject.disabled || !stage.value) hint.textContent = 'اختر المرحلة والمادة أولاً ثم اختر الملف.';
+            else if (stage.value && grade.value && subject.value === '' && !subject.disabled) hint.textContent = DEFAULT_HINT;
+            else if (!stage.value || !grade.value) hint.textContent = DEFAULT_HINT;
           }
-          stage.addEventListener('change', function () { fillSubjects(stage.value, ''); });
+          stage.addEventListener('change', function () { fillGrades(stage.value, ''); });
+          grade.addEventListener('change', function () { fillSubjects(stage.value, grade.value, ''); });
           subject.addEventListener('change', refresh);
           file.addEventListener('change', refresh);
 
           var preset = form.dataset.preset;
           if (preset) {
             data.forEach(function (st) {
-              st.subjects.forEach(function (su) {
-                if (String(su.id) === preset) { stage.value = st.id; fillSubjects(st.id, su.id); }
+              st.grades.forEach(function (g) {
+                g.subjects.forEach(function (su) {
+                  if (String(su.id) === preset) {
+                    stage.value = st.id; fillGrades(st.id, g.id);
+                    fillSubjects(st.id, g.id, su.id);
+                  }
+                });
               });
             });
           }
@@ -87,29 +112,34 @@
   {% for stage in stages %}
   <section class="card">
     <h3>{{ stage.name }}</h3>
-    {% for sub in stage.subjects.all %}
-      <h4>{{ sub.name }}</h4>
-      <div class="rows" style="padding-bottom:0">
-        {% for p in sub.pages.all %}
-          <div class="row">
-            <a class="name" href="{% url 'page' p.pk %}">{{ p.title }}</a>
-            {% if p.is_free %}<span class="tag">مجاني</span>{% endif %}
-            <div class="actions">
-              <a class="btn ghost small" href="{% url 'file_edit' p.pk %}">تعديل</a>
-              <form method="post" action="{% url 'file_toggle_free' p.pk %}">{% csrf_token %}
-                <button class="btn ghost small">{% if p.is_free %}إلغاء المجاني{% else %}اجعله مجاني{% endif %}</button>
-              </form>
-              <form method="post" action="{% url 'file_delete' p.pk %}" onsubmit="return confirm('حذف هذا الملف نهائياً؟')">{% csrf_token %}
-                <button class="btn danger small">حذف</button>
-              </form>
+    {% for g in stage.grades.all %}
+      <h4 style="color:var(--yellow)">{{ g.name }}</h4>
+      {% for sub in g.subjects.all %}
+        <p class="muted" style="margin:10px 0 6px;font-weight:600">{{ sub.name }}</p>
+        <div class="rows" style="padding-bottom:0">
+          {% for p in sub.pages.all %}
+            <div class="row">
+              <a class="name" href="{% url 'page' p.pk %}">{{ p.title }}</a>
+              {% if p.is_free %}<span class="tag">مجاني</span>{% endif %}
+              <div class="actions">
+                <a class="btn ghost small" href="{% url 'file_edit' p.pk %}">تعديل</a>
+                <form method="post" action="{% url 'file_toggle_free' p.pk %}">{% csrf_token %}
+                  <button class="btn ghost small">{% if p.is_free %}إلغاء المجاني{% else %}اجعله مجاني{% endif %}</button>
+                </form>
+                <form method="post" action="{% url 'file_delete' p.pk %}" onsubmit="return confirm('حذف هذا الملف نهائياً؟')">{% csrf_token %}
+                  <button class="btn danger small">حذف</button>
+                </form>
+              </div>
             </div>
-          </div>
-        {% empty %}
-          <p class="muted" style="margin:0">لا توجد ملفات.</p>
-        {% endfor %}
-      </div>
+          {% empty %}
+            <p class="muted" style="margin:0">لا توجد ملفات.</p>
+          {% endfor %}
+        </div>
+      {% empty %}
+        <p class="muted" style="margin:4px 0">لا توجد مواد في هذا الصف.</p>
+      {% endfor %}
     {% empty %}
-      <p class="muted">لا توجد مواد في هذه المرحلة.</p>
+      <p class="muted">لا توجد صفوف في هذه المرحلة.</p>
     {% endfor %}
   </section>
   {% endfor %}
