@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.site_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --board:#0f211d; --board2:#14302a; --panel:#1a3a33; --line:#2f5a4e;
+      --chalk:#eef3ea; --muted:#9fb8ad; --yellow:#f4d35e; --mint:#7bd8b0;
+      --danger:#ff9a90; --wa:#25d366;
+    }
+    * { box-sizing:border-box; }
+    html, body { margin:0; }
+    body { min-height:100vh; display:flex; flex-direction:column; background:var(--board); color:var(--chalk);
+           font-family:"Cairo","Segoe UI",Tahoma,system-ui,sans-serif; line-height:1.7; }
+    main { flex:1; }
+    a { color:var(--yellow); }
+    h1, h2, h3, .brand { font-family:"Reem Kufi","Cairo",system-ui,sans-serif; font-weight:700; line-height:1.3; }
+    :focus-visible { outline:3px solid var(--yellow); outline-offset:2px; }
+    .wrap { max-width:1080px; margin:0 auto; padding:0 20px; }
+    .muted { color:var(--muted); }
+
+    .top { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--board2);
+           border-bottom:1px solid var(--line); flex-wrap:wrap; }
+    .brand { font-size:1.35rem; color:var(--chalk); text-decoration:none; flex:1; }
+    .top nav { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .top nav form { margin:0; }
+    .link { color:var(--muted); font-size:.92rem; }
+
+    .btn { display:inline-block; background:var(--yellow); color:#2a2300; border:0; padding:9px 18px; border-radius:6px;
+           font:inherit; font-weight:700; cursor:pointer; text-decoration:none; font-size:.95rem; }
+    .btn:hover { filter:brightness(1.07); }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn.ghost { background:transparent; color:var(--chalk); border:1px solid var(--line); font-weight:400; }
+    .btn.small { padding:4px 12px; font-size:.85rem; }
+    .btn.danger { background:transparent; color:var(--danger); border:1px solid #6b3a36; font-weight:400; }
+
+    .msgs { max-width:1080px; margin:14px auto 0; padding:0 20px; }
+    .msg { padding:10px 16px; border-radius:6px; margin-bottom:8px; background:var(--panel); border-right:5px solid var(--muted); }
+    .msg.success { border-right-color:var(--mint); }
+    .msg.error { border-right-color:var(--danger); }
+
+    input[type=text], input[type=number], input[type=password], input[type=file], select, textarea {
+      width:100%; padding:9px 12px; border-radius:6px; border:1px solid var(--line);
+      background:var(--board); color:var(--chalk); font:inherit; }
+    select:disabled, input:disabled { opacity:.5; }
+    label { display:block; font-size:.92rem; color:var(--muted); margin-bottom:12px; }
+    label.check { display:flex; gap:8px; align-items:center; color:var(--chalk); }
+    label.check input { width:auto; }
+    .errorlist { list-style:none; margin:4px 0 0; padding:0; color:var(--danger); font-size:.88rem; }
+
+    /* الصفحة الرئيسية */
+    .hero { display:flex; gap:32px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:44px 20px 28px; }
+    .hero-text { flex:1 1 380px; }
+    .hero h1 { font-size:clamp(2rem,5vw,3.1rem); margin:0 0 6px; }
+    .lead { color:var(--muted); font-size:1.1rem; margin:0 0 20px; max-width:34em; }
+    .inline-form { display:flex; gap:8px; max-width:420px; }
+    .inline-form input { flex:1; direction:ltr; text-align:center; letter-spacing:.12em; }
+    .ok { color:var(--mint); font-weight:600; }
+    .free-card { flex:0 1 330px; display:flex; flex-direction:column; gap:6px; padding:22px; text-decoration:none;
+                 color:var(--chalk); border:2px dashed var(--yellow); border-radius:10px; background:var(--board2); }
+    .free-card:hover { background:var(--panel); }
+    .free-card strong { font-family:"Reem Kufi","Cairo",sans-serif; font-size:1.35rem; }
+    .free-card small { color:var(--muted); }
+    .free-card .go { margin-top:8px; color:var(--yellow); font-weight:600; }
+    .tag { align-self:flex-start; background:var(--yellow); color:#2a2300; font-weight:700; font-size:.78rem; padding:1px 10px; border-radius:20px; }
+    .tag.lock { background:transparent; color:var(--muted); border:1px solid var(--line); }
+    .tag.open { background:transparent; color:var(--mint); border:1px solid var(--mint); }
+
+    .stage-sec { padding:22px 0 8px; }
+    .stage-sec h2 { font-size:1.6rem; margin:0 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
+    .tile { display:flex; flex-direction:column; gap:2px; padding:18px; border:2px dashed var(--line); border-radius:10px;
+            text-decoration:none; color:var(--chalk); transition:border-color .15s, background .15s; }
+    .tile:hover { border-color:var(--yellow); background:var(--board2); }
+    .t-name { font-weight:700; font-size:1.1rem; }
+    .t-count { color:var(--muted); font-size:.9rem; }
+
+    .crumbs { padding:22px 0 6px; color:var(--muted); font-size:.95rem; }
+    .crumbs a { color:var(--muted); }
+    h1.page-title { font-size:2rem; margin:6px 0 18px; }
+    .rows { display:flex; flex-direction:column; gap:10px; padding-bottom:30px; }
+    .row { display:flex; align-items:center; gap:12px; padding:14px 18px; border:1px solid var(--line); border-radius:8px;
+           background:var(--board2); text-decoration:none; color:var(--chalk); flex-wrap:wrap; }
+    a.row:hover { border-color:var(--yellow); }
+    .row .name { flex:1; font-weight:600; min-width:140px; }
+
+    .viewer-bar { display:flex; align-items:center; gap:10px; padding:10px 20px; flex-wrap:wrap; background:var(--board2); border-bottom:1px solid var(--line); }
+    .viewer-bar .crumbs { padding:0; flex:1; }
+    .stage { background:#fff; height:calc(100vh - 170px); min-height:480px; }
+    .stage iframe { width:100%; height:100%; border:0; display:block; }
+    .lockbox { max-width:480px; margin:48px auto; padding:30px; border:2px dashed var(--yellow); border-radius:12px; background:var(--board2); text-align:center; }
+    .lockbox h1 { font-size:1.7rem; margin:6px 0; }
+    .lockbox form { display:flex; gap:8px; margin:16px 0; }
+    .lockbox input[name=code] { direction:ltr; text-align:center; letter-spacing:.12em; }
+    .empty { padding:40px 20px; text-align:center; color:var(--muted); }
+
+    .foot { margin-top:40px; background:var(--board2); border-top:1px solid var(--line); padding:20px; text-align:center; }
+    .foot p { margin:0 0 10px; color:var(--muted); }
+    .wa { display:inline-flex; align-items:center; gap:10px; background:var(--wa); color:#032b12; font-weight:700;
+          padding:10px 22px; border-radius:50px; text-decoration:none; font-size:1.05rem; }
+    .wa:hover { filter:brightness(1.07); }
+
+    /* لوحة الأدمن */
+    .pnav { display:flex; gap:8px; flex-wrap:wrap; padding:22px 0 8px; }
+    .pnav a { padding:7px 16px; border:1px solid var(--line); border-radius:6px; color:var(--chalk); text-decoration:none; font-size:.95rem; }
+    .pnav a.on { background:var(--yellow); color:#2a2300; border-color:var(--yellow); font-weight:700; }
+    .card { background:var(--board2); border:1px solid var(--line); border-radius:10px; padding:20px; margin:14px 0; }
+    .card h2 { font-size:1.35rem; margin:0 0 14px; }
+    .card h3 { font-size:1.15rem; margin:0 0 10px; }
+    .card h4 { margin:16px 0 8px; font-size:1rem; color:var(--mint); }
+    .upform { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0 16px; align-items:end; }
+    .upform .full { grid-column:1/-1; }
+    .actions { display:flex; gap:6px; align-items:center; }
+    .actions form { margin:0; }
+    .code { font-family:ui-monospace,Consolas,monospace; direction:ltr; font-size:1.05rem; letter-spacing:.1em; background:var(--board); padding:3px 10px; border-radius:5px; }
+    .formrow { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+    .formrow label { flex:1 1 160px; margin:0; }
+    .hint { font-size:.88rem; color:var(--muted); margin:6px 0 0; }
+    @media (max-width:560px){ .stage{ height:calc(100vh - 230px);} }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="{% url 'home' %}">{{ site.site_name }}</a>
+    <nav>
+      {% if user.is_staff %}
+        <a class="btn ghost small" href="{% url 'panel' %}">لوحة التحكم</a>
+        <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="btn ghost small">خروج</button></form>
+      {% else %}
+        {% if has_code %}
+          <form action="{% url 'lock' %}" method="post">{% csrf_token %}<button class="btn ghost small">إنهاء الجلسة</button></form>
+        {% endif %}
+        <a class="link" href="{% url 'login' %}">دخول الأدمن</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  {% if messages %}
+  <div class="msgs">{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}</div>
+  {% endif %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer class="foot">
+    {% if site.whatsapp_number %}
+      <p>للحصول على كود الدخول لباقي الملفات، تواصل مع الأدمن على واتساب</p>
+      <a class="wa" href="{{ site.wa_url }}" target="_blank" rel="noopener">
+        <span aria-hidden="true">💬</span><span dir="ltr">{{ site.whatsapp_number }}</span>
+      </a>
+    {% elif user.is_staff %}
+      <p>لم تضف رقم واتساب بعد. <a href="{% url 'panel_settings' %}">أضفه من الإعدادات</a> ليظهر هنا لكل الزوار.</p>
+    {% else %}
+      <p>© {{ site.site_name }}</p>
+    {% endif %}
+  </footer>
+</body>
+</html>

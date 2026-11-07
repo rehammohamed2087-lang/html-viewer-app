@@ -1,0 +1,19 @@
+{% extends "viewer/base.html" %}
+{% block title %}تعديل ملف{% endblock %}
+{% block content %}
+<div class="wrap">
+  {% include "viewer/panel/_nav.html" with active="files" %}
+  <section class="card" style="max-width:560px">
+    <h2>تعديل: {{ page.title }}</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <label>{{ form.title.label }} {{ form.title }}{{ form.title.errors }}</label>
+      <label>{{ form.subject.label }} {{ form.subject }}{{ form.subject.errors }}</label>
+      <label class="check">{{ form.is_free }} {{ form.is_free.label }}</label>
+      <button class="btn">حفظ</button>
+      <a class="btn ghost" href="{% url 'panel' %}">إلغاء</a>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "viewer/base.html" %}
+{% block title %}{{ subject.name }} — {{ site.site_name }}{% endblock %}
+{% block content %}
+<div class="wrap">
+  <div class="crumbs"><a href="{% url 'home' %}">الرئيسية</a> › {{ subject.stage.name }}</div>
+  <h1 class="page-title">{{ subject.name }}</h1>
+  <div class="rows">
+    {% for p in pages %}
+      <a class="row" href="{% url 'page' p.pk %}">
+        <span class="name">{{ p.title }}</span>
+        {% if p.is_free %}<span class="tag">مجاني</span>
+        {% elif unlocked %}<span class="tag open">مفتوح</span>
+        {% else %}<span class="tag lock">🔒 بكود</span>{% endif %}
+      </a>
+    {% empty %}
+      <div class="empty">لا توجد ملفات في هذه المادة بعد.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

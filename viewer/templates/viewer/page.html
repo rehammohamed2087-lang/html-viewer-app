@@ -1,0 +1,40 @@
+{% extends "viewer/base.html" %}
+{% block title %}{{ page.title }} — {{ site.site_name }}{% endblock %}
+{% block content %}
+{% if allowed %}
+  <div class="viewer-bar">
+    <div class="crumbs">
+      <a href="{% url 'home' %}">الرئيسية</a>
+      {% if page.subject %} › {{ page.subject.stage.name }} › <a href="{% url 'subject' page.subject.pk %}">{{ page.subject.name }}</a>{% endif %}
+      › {{ page.title }}
+    </div>
+    {% if page.is_free %}<span class="tag">مجاني</span>{% endif %}
+    <button type="button" class="btn ghost small" onclick="var f=document.getElementById('frame'); (f.requestFullscreen||f.webkitRequestFullscreen).call(f)">ملء الشاشة</button>
+  </div>
+  <div class="stage">
+    <iframe id="frame" src="{% url 'raw' page.pk %}"
+            sandbox="allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock"
+            allow="fullscreen" title="{{ page.title }}"></iframe>
+  </div>
+{% else %}
+  <div class="wrap">
+    <div class="lockbox">
+      <div style="font-size:2.4rem" aria-hidden="true">🔒</div>
+      <h1>{{ page.title }}</h1>
+      <p class="muted">هذا الملف يحتاج كود دخول. اطلب الكود من الأدمن عبر واتساب (الرقم أسفل الصفحة) ثم اكتبه هنا.</p>
+      <form method="post" action="{% url 'unlock' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input type="text" name="code" placeholder="كود الدخول" autocomplete="off" required aria-label="كود الدخول">
+        <button class="btn">فتح</button>
+      </form>
+      {% if site.whatsapp_number %}
+        <a class="wa" href="{{ site.wa_url }}" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> اطلب الكود من الأدمن</a>
+      {% endif %}
+      {% if free_page %}
+        <p style="margin-top:20px"><a href="{% url 'page' free_page.pk %}">أو جرّب الملف المجاني: {{ free_page.title }}</a></p>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

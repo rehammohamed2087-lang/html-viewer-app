@@ -1,0 +1,137 @@
+{% extends "viewer/base.html" %}
+{% block title %}لوحة التحكم — {{ site.site_name }}{% endblock %}
+{% block content %}
+<div class="wrap">
+  {% include "viewer/panel/_nav.html" with active="files" %}
+
+  <section class="card">
+    <h2>رفع ملفات HTML</h2>
+    {% if not structure %}
+      <p>لازم تضيف مرحلة ومادة واحدة على الأقل قبل رفع الملفات.</p>
+      <a class="btn" href="{% url 'panel_structure' %}">إضافة المراحل والمواد</a>
+    {% else %}
+      <form id="up" class="upform" method="post" action="{% url 'panel_upload' %}" enctype="multipart/form-data" data-preset="{{ preset }}">
+        {% csrf_token %}
+        <label>1. المرحلة
+          <select id="stage" required>
+            <option value="">— اختر المرحلة —</option>
+            {% for st in structure %}<option value="{{ st.id }}">{{ st.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>2. المادة
+          <select id="subject" name="subject" required disabled>
+            <option value="">— اختر المادة —</option>
+          </select>
+        </label>
+        <label>3. ملف (أو أكثر)
+          <input id="file" type="file" name="file" accept=".html,.htm,text/html" multiple required disabled>
+        </label>
+        <label class="check full">
+          <input type="checkbox" name="is_free"> اجعله الملف المجاني للزوار (يُلغى المجاني السابق)
+        </label>
+        <div class="full">
+          <button id="send" class="btn" disabled>رفع</button>
+          <span class="hint" id="hint">اختر المرحلة والمادة أولاً ثم اختر الملف.</span>
+        </div>
+      </form>
+      {{ structure|json_script:"structure-data" }}
+      <script>
+        (function () {
+          var data = JSON.parse(document.getElementById('structure-data').textContent);
+          var form = document.getElementById('up');
+          var stage = document.getElementById('stage');
+          var subject = document.getElementById('subject');
+          var file = document.getElementById('file');
+          var send = document.getElementById('send');
+          var hint = document.getElementById('hint');
+
+          function fillSubjects(stageId, selectedId) {
+            subject.innerHTML = '<option value="">— اختر المادة —</option>';
+            var st = data.filter(function (s) { return String(s.id) === String(stageId); })[0];
+            if (st) {
+              st.subjects.forEach(function (su) {
+                var o = document.createElement('option');
+                o.value = su.id; o.textContent = su.name;
+                if (String(su.id) === String(selectedId)) o.selected = true;
+                subject.appendChild(o);
+              });
+            }
+            subject.disabled = !st || st.subjects.length === 0;
+            if (st && st.subjects.length === 0) hint.textContent = 'هذه المرحلة ليس بها مواد. أضف مادة من «المراحل والمواد».';
+            refresh();
+          }
+          function refresh() {
+            var ready = stage.value && subject.value;
+            file.disabled = !ready;
+            send.disabled = !(ready && file.files.length);
+            if (ready) hint.textContent = 'سيتم الرفع داخل المادة المختارة.';
+            else if (!subject.disabled || !stage.value) hint.textContent = 'اختر المرحلة والمادة أولاً ثم اختر الملف.';
+          }
+          stage.addEventListener('change', function () { fillSubjects(stage.value, ''); });
+          subject.addEventListener('change', refresh);
+          file.addEventListener('change', refresh);
+
+          var preset = form.dataset.preset;
+          if (preset) {
+            data.forEach(function (st) {
+              st.subjects.forEach(function (su) {
+                if (String(su.id) === preset) { stage.value = st.id; fillSubjects(st.id, su.id); }
+              });
+            });
+          }
+        })();
+      </script>
+    {% endif %}
+  </section>
+
+  {% for stage in stages %}
+  <section class="card">
+    <h3>{{ stage.name }}</h3>
+    {% for sub in stage.subjects.all %}
+      <h4>{{ sub.name }}</h4>
+      <div class="rows" style="padding-bottom:0">
+        {% for p in sub.pages.all %}
+          <div class="row">
+            <a class="name" href="{% url 'page' p.pk %}">{{ p.title }}</a>
+            {% if p.is_free %}<span class="tag">مجاني</span>{% endif %}
+            <div class="actions">
+              <a class="btn ghost small" href="{% url 'file_edit' p.pk %}">تعديل</a>
+              <form method="post" action="{% url 'file_toggle_free' p.pk %}">{% csrf_token %}
+                <button class="btn ghost small">{% if p.is_free %}إلغاء المجاني{% else %}اجعله مجاني{% endif %}</button>
+              </form>
+              <form method="post" action="{% url 'file_delete' p.pk %}" onsubmit="return confirm('حذف هذا الملف نهائياً؟')">{% csrf_token %}
+                <button class="btn danger small">حذف</button>
+              </form>
+            </div>
+          </div>
+        {% empty %}
+          <p class="muted" style="margin:0">لا توجد ملفات.</p>
+        {% endfor %}
+      </div>
+    {% empty %}
+      <p class="muted">لا توجد مواد في هذه المرحلة.</p>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  {% if orphans %}
+  <section class="card">
+    <h3>ملفات بدون مرحلة/مادة</h3>
+    <p class="hint">هذه ملفات مرفوعة قبل إضافة الأقسام. افتح «تعديل» لنقلها إلى المادة الصحيحة (لن تظهر للزوار قبل ذلك).</p>
+    <div class="rows" style="padding-bottom:0">
+      {% for p in orphans %}
+        <div class="row">
+          <span class="name">{{ p.title }}</span>
+          <div class="actions">
+            <a class="btn small" href="{% url 'file_edit' p.pk %}">تصنيف</a>
+            <form method="post" action="{% url 'file_delete' p.pk %}" onsubmit="return confirm('حذف هذا الملف نهائياً؟')">{% csrf_token %}
+              <button class="btn danger small">حذف</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

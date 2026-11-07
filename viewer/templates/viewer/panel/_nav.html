@@ -1,0 +1,7 @@
+<nav class="pnav" aria-label="لوحة التحكم">
+  <a href="{% url 'panel' %}" {% if active == 'files' %}class="on"{% endif %}>الملفات والرفع</a>
+  <a href="{% url 'panel_structure' %}" {% if active == 'structure' %}class="on"{% endif %}>المراحل والمواد</a>
+  <a href="{% url 'panel_codes' %}" {% if active == 'codes' %}class="on"{% endif %}>أكواد الدخول</a>
+  <a href="{% url 'panel_settings' %}" {% if active == 'settings' %}class="on"{% endif %}>الإعدادات</a>
+  <a href="{% url 'home' %}">عرض الموقع</a>
+</nav>

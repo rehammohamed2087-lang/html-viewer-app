@@ -1,0 +1,20 @@
+{% extends "viewer/base.html" %}
+{% block title %}الإعدادات{% endblock %}
+{% block content %}
+<div class="wrap">
+  {% include "viewer/panel/_nav.html" with active="settings" %}
+  <section class="card" style="max-width:560px">
+    <h2>إعدادات الموقع</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <label>اسم الموقع {{ form.site_name }}{{ form.site_name.errors }}</label>
+      <label>رقم واتساب الأدمن (يظهر أسفل الموقع) {{ form.whatsapp_number }}{{ form.whatsapp_number.errors }}
+        <span class="hint">اكتبه بالصيغة الدولية بدون + مثل 201012345678، أو رقم مصري محلي مثل 01012345678.</span>
+      </label>
+      <label>رسالة واتساب الجاهزة عند ضغط الزائر على الزر {{ form.whatsapp_message }}{{ form.whatsapp_message.errors }}</label>
+      <button class="btn">حفظ</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

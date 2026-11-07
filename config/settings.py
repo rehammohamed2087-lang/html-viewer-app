@@ -54,6 +54,7 @@ TEMPLATES = [{
         "django.template.context_processors.request",
         "django.contrib.auth.context_processors.auth",
         "django.contrib.messages.context_processors.messages",
+        "viewer.context_processors.site",
     ]},
 }]
 
@@ -83,6 +84,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 X_FRAME_OPTIONS = "SAMEORIGIN"             # نسمح بـ iframe من نفس الدومين
 MAX_HTML_FILE_SIZE = 5 * 1024 * 1024       # 5 ميجا (بيتخزن في الداتابيز)
+
+UNLOCK_MAX_ATTEMPTS = 8     # محاولات كود خاطئة مسموحة لكل IP
+UNLOCK_WINDOW = 600         # خلال كام ثانية
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"

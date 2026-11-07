@@ -1,0 +1,51 @@
+{% extends "viewer/base.html" %}
+{% block title %}أكواد الدخول{% endblock %}
+{% block content %}
+<div class="wrap">
+  {% include "viewer/panel/_nav.html" with active="codes" %}
+
+  <section class="card">
+    <h2>إنشاء كود دخول جديد</h2>
+    <form method="post" class="formrow">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <label>اسم الطالب / ملاحظة (اختياري) <input type="text" name="label" maxlength="100"></label>
+      <label>الكود (اتركه فارغاً ليُنشأ تلقائياً) <input type="text" name="code" maxlength="40" dir="ltr" autocomplete="off"></label>
+      <label>الصلاحية بالأيام (فارغ = بدون انتهاء) <input type="number" name="days" min="1" max="3650"></label>
+      <button class="btn">إنشاء</button>
+    </form>
+    <p class="hint">أرسل الكود للطالب على واتساب. الكود يفتح كل الملفات، ويمكنك إيقافه أو حذفه في أي وقت وسيسري ذلك فوراً.</p>
+  </section>
+
+  <section class="card">
+    <h2>الأكواد ({{ codes|length }})</h2>
+    <div class="rows" style="padding-bottom:0">
+      {% for c in codes %}
+        <div class="row">
+          <span class="code" id="c{{ c.pk }}">{{ c.code }}</span>
+          <span class="name">{{ c.label|default:"—" }}</span>
+          <span class="tag {% if c.is_valid %}open{% else %}lock{% endif %}">{{ c.status }}</span>
+          <span class="muted" style="font-size:.85rem">
+            {% if c.expires_at %}ينتهي {{ c.expires_at|date:"Y/m/d" }}{% else %}بدون انتهاء{% endif %}
+            {% if c.last_used_at %} · آخر استخدام {{ c.last_used_at|date:"Y/m/d H:i" }}{% endif %}
+          </span>
+          <div class="actions">
+            <button type="button" class="btn ghost small" onclick="navigator.clipboard.writeText('{{ c.code }}').then(function(){alert('تم النسخ')})">نسخ</button>
+            <a class="btn ghost small" target="_blank" rel="noopener" href="https://wa.me/?text={{ c.share_text|urlencode }}">إرسال واتساب</a>
+            <form method="post">{% csrf_token %}
+              <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ c.pk }}">
+              <button class="btn ghost small">{% if c.is_active %}إيقاف{% else %}تفعيل{% endif %}</button>
+            </form>
+            <form method="post" onsubmit="return confirm('حذف هذا الكود؟')">{% csrf_token %}
+              <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ c.pk }}">
+              <button class="btn danger small">حذف</button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        <p class="muted" style="margin:0">لا توجد أكواد بعد.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
