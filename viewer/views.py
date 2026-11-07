@@ -20,15 +20,10 @@ from .forms import (
     CodeCreateForm, FileEditForm, GradeForm, StageForm, SettingsForm, SubjectForm, UploadForm,
     read_html_file,
 )
+from .defaults import ORDINALS, ensure_default_structure
 from .models import AccessCode, Grade, HtmlPage, SiteSettings, Stage, Subject
 
 staff_only = staff_member_required(login_url="login")
-
-# (اسم المرحلة، عدد الصفوف)
-DEFAULT_STAGES = [("المرحلة الابتدائية", 6), ("المرحلة الإعدادية", 3), ("المرحلة الثانوية", 3)]
-ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس",
-            "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر"]
-
 
 def _add_grades(stage, count):
     """بيضيف «الصف الأول» ... حتى العدد المطلوب، ويتخطى الموجود."""
@@ -361,10 +356,10 @@ def panel_structure(request):
                     messages.error(request, "يوجد مادة بنفس الاسم في هذا الصف.")
                 else:
                     obj.name = name; obj.save(update_fields=["name"]); messages.success(request, "تم تعديل الاسم.")
-        elif action == "seed" and not Stage.objects.exists():
-            for i, (name, count) in enumerate(DEFAULT_STAGES, start=1):
-                _add_grades(Stage.objects.create(name=name, order=i), count)
-            messages.success(request, "تمت إضافة المراحل والصفوف الافتراضية.")
+        elif action == "seed":
+            added = ensure_default_structure(Stage, Grade)
+            messages.success(request, f"تم إكمال الهيكل الافتراضي (أُضيف {added})." if added
+                             else "الهيكل الافتراضي مكتمل بالفعل.")
         return redirect("panel_structure")
 
     stages = Stage.objects.prefetch_related(

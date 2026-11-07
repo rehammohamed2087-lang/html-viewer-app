@@ -12,13 +12,12 @@
       <label>اسم المرحلة <input type="text" name="name" maxlength="100" required placeholder="مثال: المرحلة الإعدادية"></label>
       <button class="btn">إضافة</button>
     </form>
-    {% if not stages %}
     <form method="post" style="margin-top:12px">
       {% csrf_token %}
       <input type="hidden" name="action" value="seed">
-      <button class="btn ghost small">أو أضف الافتراضي: الابتدائية (6 صفوف) + الإعدادية (3) + الثانوية (3)</button>
+      <button class="btn ghost small">إكمال الهيكل الافتراضي: الابتدائية (6 صفوف) + الإعدادية (3) + الثانوية (3)</button>
+      <span class="hint">يضيف الناقص فقط ولا يحذف ولا يكرر شيئاً.</span>
     </form>
-    {% endif %}
   </section>
 
   {% for stage in stages %}
