@@ -42,10 +42,10 @@
         var file = document.getElementById('file'), send = document.getElementById('send'), hint = document.getElementById('hint');
 
         function find(list, id) { return (list || []).filter(function (x) { return String(x.id) === String(id); })[0]; }
-        function build(sel, items, selectedId, newLabel, forceNew) {
+        function build(sel, items, selectedId, newLabel, forceNew, placeholder) {
           sel.innerHTML = '';
           function add(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); return o; }
-          add('', '— اختر —');
+          add('', placeholder);
           items.forEach(function (it) { add(it.id, it.name); });
           add(NEW, newLabel);
           sel.disabled = false;
@@ -66,7 +66,7 @@
           if (!grade.value) { lock(subject, 'اختر المادة'); }
           else {
             var st = find(data, stage.value), g = st && find(st.grades, grade.value);
-            build(subject, g ? g.subjects : [], selectedSubject, '➕ إضافة مادة جديدة…', grade.value === NEW);
+            build(subject, g ? g.subjects : [], selectedSubject, '➕ إضافة مادة جديدة…', grade.value === NEW, '— اختر المادة (عربي / رياضيات ...) —');
           }
           onSubject();
         }
@@ -75,7 +75,7 @@
           if (!stage.value) { lock(grade, 'اختر الصف'); }
           else {
             var st = find(data, stage.value);
-            build(grade, st ? st.grades : [], selectedGrade, '➕ إضافة صف جديد…', stage.value === NEW);
+            build(grade, st ? st.grades : [], selectedGrade, '➕ إضافة صف جديد…', stage.value === NEW, '— اختر الصف (الأول / الثاني ...) —');
           }
           onGrade(selectedSubject);
         }
@@ -86,8 +86,8 @@
           send.disabled = !(ready && file.files.length);
         }
 
-        build(stage, data, '', '➕ إضافة مرحلة جديدة…', false);
-        lock(grade, 'اختر الصف'); lock(subject, 'اختر المادة');
+        build(stage, data, '', '➕ إضافة مرحلة جديدة…', false, '— اختر المرحلة (ابتدائي / إعدادي / ثانوي) —');
+        lock(grade, 'اختر الصف أولاً'); lock(subject, 'اختر المادة أولاً');
 
         stage.addEventListener('change', function () { onStage('', ''); });
         grade.addEventListener('change', function () { onGrade(''); });
